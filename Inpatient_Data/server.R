@@ -1,26 +1,32 @@
-#
-# This is the server logic of a Shiny web application. You can run the 
-# application by clicking 'Run App' above.
-#
-# Find out more about building applications with Shiny here:
-# 
-#    http://shiny.rstudio.com/
-#
-
 library(shiny)
+library(plotly)
+library(ggplot2)
 
-# Define server logic required to draw a histogram
-shinyServer(function(input, output) {
-   
-  output$distPlot <- renderPlot({
-    
-    # generate bins based on input$bins from ui.R
-    x    <- faithful[, 2] 
-    bins <- seq(min(x), max(x), length.out = input$bins + 1)
-    
-    # draw the histogram with the specified number of bins
-    hist(x, breaks = bins, col = 'darkgray', border = 'white')
-    
+#Since this
+# doesn't rely on any user inputs, we can do this once at startup
+# and then use the value throughout the lifetime of the app
+
+# Define server logic to plot various variables ----
+server <- function(input, output) {
+  
+  # Compute the formula text ----
+  # This is in a reactive expression since it is shared by the
+  # output$caption and output$plot
+  formulaText <- reactive({
+    paste("Provider ~ ", input$variable)
   })
   
-})
+  # Return the formula text for printing as a caption ----
+  output$caption <- renderText({
+    formulaText()
+  })
+  
+  # Generate a plot of the requested variable ----
+  # and only exclude outliers if requested
+  output$providerPlot <- renderPlot({
+    ggplot(temp, aes(x=year, y=input$variable, fill = top_5_provider$provider_name)) +
+      geom_col(position = "stack")
+      ylab(paste("Measuring", input$variable))
+  })
+  
+}

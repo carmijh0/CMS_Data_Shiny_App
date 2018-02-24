@@ -101,15 +101,55 @@ df_in = bind_rows(dfin_2014, dfin_2015, dfin_2013, dfin_2012, dfin_2011)
 length(unique(df_in$year))
 length(unique(df_in$drg_definition))
 
-drg_count_total <- df_in %>% 
-  group_by(drg_definition) %>% 
-  tally() %>% 
-  arrange(desc(n))
+drg_count_total <- df_in %>% group_by(drg_definition) %>% tally() %>% arrange(desc(n))
+provider_count_total <- df_in %>% group_by(provider_name) %>% tally() %>% arrange(desc(n))
 
 View(drg_count_total)
+View(provider_count_total)
 
-df_in <- df_in %>% 
+df_in$drg_definition <- as.complex(df_in$drg_definition)
 
+target <- c('194 - SIMPLE PNEUMONIA & PLEURISY W CC', '292 - HEART FAILURE & SHOCK W CC',
+            '871 - SEPTICEMIA OR SEVERE SEPSIS W/O MV 96+ HOURS W MCC', '690 - KIDNEY & URINARY TRACT INFECTIONS W/O MCC',
+            '392 - ESOPHAGITIS, GASTROENT & MISC DIGEST DISORDERS W/O MCC')
+
+top_5_drg <- df_in[df_in$drg_definition %in% c('194 - SIMPLE PNEUMONIA & PLEURISY W CC', '292 - HEART FAILURE & SHOCK W CC',
+                                                 '871 - SEPTICEMIA OR SEVERE SEPSIS W/O MV 96+ HOURS W MCC', '690 - KIDNEY & URINARY TRACT INFECTIONS W/O MCC',
+                                                 '392 - ESOPHAGITIS, GASTROENT & MISC DIGEST DISORDERS W/O MCC'), ] 
+
+View(top_5_drg)
+
+df_in$provider_name <- as.character(df_in$provider_name)
+
+target <- c('GOOD SAMARITAN HOSPITAL', 'ST JOSEPH MEDICAL CENTER', 'ST JOSEPH HOSPITAL',
+            'MERCY MEDICAL CENTER', 'MERCY HOSPITAL')
+
+top_5_provider <- filter(df_in, provider_name %in% target)
+
+View(top_5_provider)
+
+top_5_provider$year <- as.numeric(top_5_provider$year)
+top_5_provider$total_discharges <- as.numeric(top_5_provider$total_discharges)
+top_5_provider$average_covered_charges <- as.numeric(top_5_provider$average_covered_charges)
+
+ggplot(top_5_provider, aes(x=year, y=average_covered_charges, fill=provider_name)) +
+         geom_bar(stat = 'identity')
+ggplot(top_5_provider, aes(x=year, y=average_total_payments, fill=provider_name)) +
+  geom_bar(stat = 'identity')
+
+?geom_col
+
+top_5_provider$provider_name <- as.factor(top_5_provider$provider_name)
+
+temp <- top_5_provider
+temp$provider_name <- as.factor(temp$provider_name)
+
+
+ggplot(temp, aes(x=year, y=average_covered_charges, fill = top_5_provider$provider_name)) +
+  geom_col(position = "stack")
+
+ggplot(top_5_provider, aes(x=year, y=average_total_payments)) +
+  geom_col(position = "stack", fill=provider_name)
 
 #df_in %>%
   # mutate(payments_to_charges = as.numeric(average_total_payments) / as.numeric(average_covered_charges)) %>%

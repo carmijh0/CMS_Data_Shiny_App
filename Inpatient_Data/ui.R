@@ -1,33 +1,35 @@
-#
-# This is the user-interface definition of a Shiny web application. You can
-# run the application by clicking 'Run App' above.
-#
-# Find out more about building applications with Shiny here:
-# 
-#    http://shiny.rstudio.com/
-#
-
 library(shiny)
+library(shinythemes)
 
-# Define UI for application that draws a histogram
-shinyUI(fluidPage(
+# Define UI for miles per gallon app ----
+ui <- fluidPage(theme=shinytheme("cosmo"),
   
-  # Application title
-  titlePanel("Old Faithful Geyser Data"),
+  # App title ----
+  titlePanel("Top 5 National Providers"),
   
-  # Sidebar with a slider input for number of bins 
+  # Sidebar layout with input and output definitions ----
   sidebarLayout(
+    
+    # Sidebar panel for inputs ----
     sidebarPanel(
-       sliderInput("bins",
-                   "Number of bins:",
-                   min = 1,
-                   max = 50,
-                   value = 30)
+      
+      # Input: Selector for variable to plot against year ----
+      selectInput("variable", "Variable:",
+                  c("Average Covered Charges" = "average_covered_charges",
+                    "Average Total Payments" = "average_total_payments",
+                    "Average Medicare Payments" = "average_medicare_payments")),
+      
+      # Input: Checkbox for whether outliers should be included ----
+      checkboxInput("outliers", "Show outliers", TRUE)
+      
     ),
     
-    # Show a plot of the generated distribution
+    # Main panel for displaying outputs ----
     mainPanel(
-       plotOutput("distPlot")
+      
+      # Output: Plot of the requested variable against mpg ----
+      plotOutput("providerPlot")
+      
     )
   )
-))
+)
