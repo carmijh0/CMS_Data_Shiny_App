@@ -1,35 +1,21 @@
-library(shiny)
-library(shinythemes)
-
-# Define UI for miles per gallon app ----
-ui <- fluidPage(theme=shinytheme("cosmo"),
+# Define UI for application
+ui <- pageWithSidebar(
   
-  # App title ----
-  titlePanel("Top 5 National Providers"),
-  
-  # Sidebar layout with input and output definitions ----
-  sidebarLayout(
+    #Title
+    headerPanel("DRG Exploration"),
     
-    # Sidebar panel for inputs ----
+    # Inputs
     sidebarPanel(
       
-      # Input: Selector for variable to plot against year ----
-      selectInput("variable", "Variable:",
-                  c("Average Covered Charges" = "average_covered_charges",
-                    "Average Total Payments" = "average_total_payments",
-                    "Average Medicare Payments" = "average_medicare_payments")),
-      
-      # Input: Checkbox for whether outliers should be included ----
-      checkboxInput("outliers", "Show outliers", TRUE)
-      
+      # Select variable for y-axis for drg barplot
+      selectInput(inputId = "y", 
+                  label = "Y-axis:",
+                  choices = c("total_discharges", "average_covered_charges", "average_total_payments", "average_medicare_payments"),
+                  selected = "total_discharges")
     ),
     
-    # Main panel for displaying outputs ----
+    # Outputs
     mainPanel(
-      
-      # Output: Plot of the requested variable against mpg ----
-      plotOutput("providerPlot")
-      
+      plotOutput(outputId = "drgbar")
     )
   )
-)

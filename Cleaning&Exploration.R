@@ -16,6 +16,7 @@ library("raster")
 library("rgdal")
 library("sf")
 library("stringr")
+library("qdap")
 
 
 #Reading in the Medicare Inpatient provider utilization and payment data. 
@@ -107,51 +108,94 @@ provider_count_total <- df_in %>% group_by(provider_name) %>% tally() %>% arrang
 View(drg_count_total)
 View(provider_count_total)
 
-df_in$drg_definition <- as.complex(df_in$drg_definition)
+# df_in$drg_definition <- as.complex(df_in$drg_definition)
+# 
+# target <- c('194 - SIMPLE PNEUMONIA & PLEURISY W CC', '292 - HEART FAILURE & SHOCK W CC',
+#             '871 - SEPTICEMIA OR SEVERE SEPSIS W/O MV 96+ HOURS W MCC', '690 - KIDNEY & URINARY TRACT INFECTIONS W/O MCC',
+#             '392 - ESOPHAGITIS, GASTROENT & MISC DIGEST DISORDERS W/O MCC')
+# 
+# top_5_drg <- df_in[df_in$drg_definition %in% c('194 - SIMPLE PNEUMONIA & PLEURISY W CC', '292 - HEART FAILURE & SHOCK W CC',
+#                                                  '871 - SEPTICEMIA OR SEVERE SEPSIS W/O MV 96+ HOURS W MCC', '690 - KIDNEY & URINARY TRACT INFECTIONS W/O MCC',
+#                                                  '392 - ESOPHAGITIS, GASTROENT & MISC DIGEST DISORDERS W/O MCC'), ] 
+# 
+# View(top_5_drg)
+# 
+# df_in$provider_name <- as.character(df_in$provider_name)
+# 
+# target <- c('GOOD SAMARITAN HOSPITAL', 'ST JOSEPH MEDICAL CENTER', 'ST JOSEPH HOSPITAL',
+#             'MERCY MEDICAL CENTER', 'MERCY HOSPITAL')
+# 
+# top_5_provider <- filter(df_in, provider_name %in% target)
+# 
+# top_5_provider$year <- as.numeric(top_5_provider$year)
+# top_5_provider$total_discharges <- as.numeric(top_5_provider$total_discharges)
+# top_5_provider$average_covered_charges <- as.numeric(top_5_provider$average_covered_charges)
+# 
+# ggplot(top_5_provider, aes(x=year, y=average_covered_charges, fill=provider_name)) +
+#          geom_bar(stat = 'identity')
+# ggplot(top_5_provider, aes(x=year, y=average_total_payments, fill=provider_name)) +
+#   geom_bar(stat = 'identity')
+# 
+# top_5_provider$provider_name <- as.factor(top_5_provider$provider_name)
+# 
+# temp <- top_5_provider
+# temp$provider_name <- as.factor(temp$provider_name)
 
-target <- c('194 - SIMPLE PNEUMONIA & PLEURISY W CC', '292 - HEART FAILURE & SHOCK W CC',
-            '871 - SEPTICEMIA OR SEVERE SEPSIS W/O MV 96+ HOURS W MCC', '690 - KIDNEY & URINARY TRACT INFECTIONS W/O MCC',
-            '392 - ESOPHAGITIS, GASTROENT & MISC DIGEST DISORDERS W/O MCC')
+dfin_2015$total_discharges <- as.integer(dfin_2015$total_discharges)
+dfin_2015$average_total_payments <- as.integer(dfin_2015$average_total_payments)
+dfin_2015$average_covered_charges <- as.integer(dfin_2015$average_covered_charges)
+dfin_2015$average_medicare_payments <- as.integer(dfin_2015$average_medicare_payments)
 
-top_5_drg <- df_in[df_in$drg_definition %in% c('194 - SIMPLE PNEUMONIA & PLEURISY W CC', '292 - HEART FAILURE & SHOCK W CC',
-                                                 '871 - SEPTICEMIA OR SEVERE SEPSIS W/O MV 96+ HOURS W MCC', '690 - KIDNEY & URINARY TRACT INFECTIONS W/O MCC',
-                                                 '392 - ESOPHAGITIS, GASTROENT & MISC DIGEST DISORDERS W/O MCC'), ] 
+#Total discharges by DRG
 
-View(top_5_drg)
+df <- dfin_2015 %>%
+  group_by(drg_definition) %>% 
+  mutate(td_sum = sum(total_discharges),
+         tp_sum = sum(average_total_payments),
+         cc_sum = sum(average_covered_charges),
+         mp_sum = sum(average_medicare_payments))
 
-df_in$provider_name <- as.character(df_in$provider_name)
+x <- list(
+  title = "DRG (type of procedure)"
+)
+y <- list(
+  title = "Average Total Payments"
+)
 
-target <- c('GOOD SAMARITAN HOSPITAL', 'ST JOSEPH MEDICAL CENTER', 'ST JOSEPH HOSPITAL',
-            'MERCY MEDICAL CENTER', 'MERCY HOSPITAL')
+plot_ly(x= df$drg_definition,
+        y = df$tp_sum,
+        type = "bar") %>%
+  layout(xaxis = x, yaxis = y,title = "Total Payments by Procedure Type")
 
-top_5_provider <- filter(df_in, provider_name %in% target)
+#Mapping exploration
 
-View(top_5_provider)
+states <- map_data("state")
+colnames(states)[5] = 'provider_name'
 
-top_5_provider$year <- as.numeric(top_5_provider$year)
-top_5_provider$total_discharges <- as.numeric(top_5_provider$total_discharges)
-top_5_provider$average_covered_charges <- as.numeric(top_5_provider$average_covered_charges)
+states$provider_name = setNames(state.abb, state.name)["alabama"]
+View(states)
 
-ggplot(top_5_provider, aes(x=year, y=average_covered_charges, fill=provider_name)) +
-         geom_bar(stat = 'identity')
-ggplot(top_5_provider, aes(x=year, y=average_total_payments, fill=provider_name)) +
-  geom_bar(stat = 'identity')
+View(df)
 
-?geom_col
+df %>% 
+  group_by(provider_state) %>%
+  summarize(m = mean(mean_covered_charges)) %>%
+  right_join(state_map, by = 'region') %>%
+  ggplot(aes(x = long, y = lat, group = group, fill = m)) + 
+  geom_polygon() + 
+  geom_path(color = 'white') + 
+  scale_fill_continuous(low = "lightblue", 
+                        high = "dodgerblue4",
+                        name = '$') + 
+  theme_map() + 
+  coord_map('albers', lat0=30, lat1=40) + 
+  ggtitle("Mean Covered Charges for all Procedures") + 
+  theme(plot.title = element_text(hjust = 0.5))
 
-top_5_provider$provider_name <- as.factor(top_5_provider$provider_name)
-
-temp <- top_5_provider
-temp$provider_name <- as.factor(temp$provider_name)
 
 
-ggplot(temp, aes(x=year, y=average_covered_charges, fill = top_5_provider$provider_name)) +
-  geom_col(position = "stack")
 
-ggplot(top_5_provider, aes(x=year, y=average_total_payments)) +
-  geom_col(position = "stack", fill=provider_name)
-
-#df_in %>%
+ #df_in %>%
   # mutate(payments_to_charges = as.numeric(average_total_payments) / as.numeric(average_covered_charges)) %>%
   # group_by(provider_name) %>%
   # summarize(m = mean(payments_to_charges)) %>%
