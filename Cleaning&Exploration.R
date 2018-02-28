@@ -17,7 +17,7 @@ library("rgdal")
 library("sf")
 library("stringr")
 library("qdap")
-
+library("plotly")
 
 #Reading in the Medicare Inpatient provider utilization and payment data. 
 
@@ -98,6 +98,7 @@ df_in = bind_rows(dfin_2014, dfin_2015, dfin_2013, dfin_2012, dfin_2011)
 #df_out = bind_rows(dfout_2011, dfout_2012, dfout_2013, dfout_2014, dfout_2015)
 
 #Because there's so much data in each of these, I've decided to move forward with just the inpatient dataframe.
+#Exploration and Visualization
 
 length(unique(df_in$year))
 length(unique(df_in$drg_definition))
@@ -155,6 +156,8 @@ df <- dfin_2015 %>%
          cc_sum = sum(average_covered_charges),
          mp_sum = sum(average_medicare_payments))
 
+save(df, file = 'Data/grouped_drg.Rda')
+
 x <- list(
   title = "DRG (type of procedure)"
 )
@@ -167,35 +170,60 @@ plot_ly(x= df$drg_definition,
         type = "bar") %>%
   layout(xaxis = x, yaxis = y,title = "Total Payments by Procedure Type")
 
-#Mapping exploration
+#Mapping exploration - Have to upgrade RAM! 
 
-states <- map_data("state")
-colnames(states)[5] = 'provider_name'
+# state_map <- map_data('state')
+# state.abb <- append(state.abb, c("DC"))
+# state.name <- append(state.name, c("District of Columbia"))
+# df$region <- map_chr(df$provider_state, function(x) { tolower(state.name[grep(x, state.abb)]) })
+# 
+# View(df)
+# View(state_map)
+# 
+# df_map <- right_join(df, state_map, by = "region")
+# 
+# df_map %>% 
+#   group_by(provider_state) %>%
+#   summarize(m = mean(average_covered_charges)) %>%
+#   ggplot(aes(x = long, y = lat, group = group, fill = m)) + 
+#   geom_polygon() + 
+#   geom_path(color = 'white') + 
+#   scale_fill_continuous(low = "lightblue", 
+#                         high = "dodgerblue4",
+#                         name = '$') + 
+#   theme_map() + 
+#   coord_map('albers', lat0=30, lat1=40) + 
+#   ggtitle("Average Covered Charges for all Procedures") + 
+#   theme(plot.title = element_text(hjust = 0.5))
 
-states$provider_name = setNames(state.abb, state.name)["alabama"]
-View(states)
+#Provider Comparison - I want the user to be able to select a state and DRG
+#to compare average total covered charges for that procedure at all the hopsitals.  
 
-View(df)
-
-df %>% 
+df_2 <- dfin_2015 %>% 
   group_by(provider_state) %>%
-  summarize(m = mean(mean_covered_charges)) %>%
-  right_join(state_map, by = 'region') %>%
-  ggplot(aes(x = long, y = lat, group = group, fill = m)) + 
-  geom_polygon() + 
-  geom_path(color = 'white') + 
-  scale_fill_continuous(low = "lightblue", 
-                        high = "dodgerblue4",
-                        name = '$') + 
-  theme_map() + 
-  coord_map('albers', lat0=30, lat1=40) + 
-  ggtitle("Mean Covered Charges for all Procedures") + 
-  theme(plot.title = element_text(hjust = 0.5))
+  mutate(state_td_sum = sum(total_discharges),
+         state_tp_sum = sum(average_total_payments),
+         state_cc_sum = sum(average_covered_charges),
+         state_mp_sum = sum(average_medicare_payments))
 
+df_2 <- data.frame(df_2)
+df_2 <- df_2[order(df_2$state_cc_sum),] # sort by #procedures
 
+View(df_2)
 
+x_2 <- list(
+  title = 'Provider States'
+)
+y_2 <- list(
+  title = "Average Covered Charges"
+)
 
- #df_in %>%
+plot_ly(x= df_2$provider_state, 
+        y = df_2$state_tp_sum, 
+        type = "bar") %>%
+  layout(xaxis = x_2, yaxis = y_2, title = "Total Payments by State")
+
+#df_in %>%
   # mutate(payments_to_charges = as.numeric(average_total_payments) / as.numeric(average_covered_charges)) %>%
   # group_by(provider_name) %>%
   # summarize(m = mean(payments_to_charges)) %>%

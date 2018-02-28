@@ -1,21 +1,31 @@
-# Define UI for application
-ui <- pageWithSidebar(
+# Define UI for app that draws a histogram ----
+ui <- fluidPage(
   
-    #Title
-    headerPanel("DRG Exploration"),
+  # App title ----
+  titlePanel("DRG Exploration"),
+  
+  # Sidebar layout with input and output definitions ----
+  sidebarLayout(
     
-    # Inputs
+    # Sidebar panel for inputs ----
     sidebarPanel(
       
-      # Select variable for y-axis for drg barplot
+      # Input: Slider for the number of bins ----
       selectInput(inputId = "y", 
                   label = "Y-axis:",
-                  choices = c("total_discharges", "average_covered_charges", "average_total_payments", "average_medicare_payments"),
-                  selected = "total_discharges")
+                  choices = c("Total Discharges" = "total_discharges",
+                              "Average Covered Charges" = "average_covered_charges",
+                              "Average Total Payments" = "average_total_payments",
+                              "Average Medicare Payments" = "average_medicare_payments")
+      
     ),
     
-    # Outputs
-    mainPanel(
-      plotOutput(outputId = "drgbar")
+    # Main panel for displaying outputs ----
+    mainPanel(plotOutput(outputId = "dgrplot", width = 8)
+      
     )
   )
+)
+
+)
+

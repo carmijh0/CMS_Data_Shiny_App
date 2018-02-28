@@ -3,28 +3,22 @@ library(plotly)
 library(ggplot2)
 library(plotly)
 
-x <- list(
-  title = "DRG (type of procedure)"
-)
+load(file = 'data/grouped_drg.Rda')
+
+#-----------------------------------------------------------------------------------------
 
 server <- function(input, output) {
   
-  formulaText <- reactive({
-    paste(input$variable, "by Procedure Type")
-  })
- 
-  output$caption <- renderText({
-    formulaText()
-  })
-  
-  # Create plotly output 
-  output$drgbar <- renderPlotly({
+  output$dgrplot <- renderPlot({
+    
     plot_ly(data = df,
-            x= df$drg_definition,
+            x= drg_definition,
             y = input$y,
             type = "bar") %>% 
-      layout(xaxis = x, yaxis = y, title = "by Procedure Type")
+      layout(xaxis = x, yaxis = y, title = input$variable, "by Procedure Type")
+    
   })
+  
 }
 
 # Create a Shiny app object
