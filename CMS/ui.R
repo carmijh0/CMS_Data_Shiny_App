@@ -1,5 +1,5 @@
 # Define UI for application that draws a histogram
-shinyUI(fluidPage(
+shinyUI(fluidPage(theme = shinytheme("united"),
   
   # Application title
   titlePanel("Exploring Inpatient Utilization Data"),

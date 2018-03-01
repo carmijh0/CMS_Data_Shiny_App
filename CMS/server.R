@@ -2,6 +2,7 @@ library(shiny)
 library(plotly)
 library(ggplot2)
 library(DT)
+library(shinythemes)
 
 load(file = 'data/grouped_drg.Rda')
 load(file = 'data/top25_grouped_drg.Rda')
