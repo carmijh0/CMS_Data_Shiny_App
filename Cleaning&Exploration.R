@@ -18,6 +18,8 @@ library("sf")
 library("stringr")
 library("qdap")
 library("plotly")
+library("devtools")
+library("plotly")
 
 #Reading in the Medicare Inpatient provider utilization and payment data. 
 
@@ -103,7 +105,7 @@ df_in = bind_rows(dfin_2014, dfin_2015, dfin_2013, dfin_2012, dfin_2011)
 length(unique(df_in$year))
 length(unique(df_in$drg_definition))
 
-drg_count_total <- df_in %>% group_by(drg_definition) %>% tally() %>% arrange(desc(n))
+drg_count_total <- df_in %>% group_by(drg_definition) %>% tally() %>% arrange(desc(n)) %>% View()
 provider_count_total <- df_in %>% group_by(provider_name) %>% tally() %>% arrange(desc(n))
 
 View(drg_count_total)
@@ -118,8 +120,6 @@ View(provider_count_total)
 # top_5_drg <- df_in[df_in$drg_definition %in% c('194 - SIMPLE PNEUMONIA & PLEURISY W CC', '292 - HEART FAILURE & SHOCK W CC',
 #                                                  '871 - SEPTICEMIA OR SEVERE SEPSIS W/O MV 96+ HOURS W MCC', '690 - KIDNEY & URINARY TRACT INFECTIONS W/O MCC',
 #                                                  '392 - ESOPHAGITIS, GASTROENT & MISC DIGEST DISORDERS W/O MCC'), ] 
-# 
-# View(top_5_drg)
 # 
 # df_in$provider_name <- as.character(df_in$provider_name)
 # 
@@ -156,6 +156,51 @@ df <- dfin_2015 %>%
          cc_sum = sum(average_covered_charges),
          mp_sum = sum(average_medicare_payments))
 
+grouped_drg <- df %>% group_by(drg_definition) %>% tally() %>% arrange(desc(n))
+View(grouped_drg)
+top_drg <- grouped_drg[1:25,]
+View(top_drg)
+
+
+save(top_drg, file = 'Data/drgtable_grouped_drg.Rda')
+
+target <- c('871 - SEPTICEMIA OR SEVERE SEPSIS W/O MV 96+ HOURS W MCC',
+            '194 - SIMPLE PNEUMONIA & PLEURISY W CC',
+            '292 - HEART FAILURE & SHOCK W CC',
+            '392 - ESOPHAGITIS, GASTROENT & MISC DIGEST DISORDERS W/O MCC',
+            '690 - KIDNEY & URINARY TRACT INFECTIONS W/O MCC',
+            '470 - MAJOR JOINT REPLACEMENT OR REATTACHMENT OF LOWER EXTREMITY W/O MCC',
+            '291 - HEART FAILURE & SHOCK W MCC',
+            '872 - SEPTICEMIA OR SEVERE SEPSIS W/O MV >96 HOURS W/O MCC',
+            '603 - CELLULITIS W/O MCC',
+            '190 - CHRONIC OBSTRUCTIVE PULMONARY DISEASE W MCC',
+            '193 - SIMPLE PNEUMONIA & PLEURISY W MCC',
+            '641 - MISC DISORDERS OF NUTRITION,METABOLISM,FLUIDS/ELECTROLYTES W/O MCC',
+            '683 - RENAL FAILURE W CC',
+            '191 - CHRONIC OBSTRUCTIVE PULMONARY DISEASE W CC',
+            '378 - G.I. HEMORRHAGE W CC',
+            '189 - PULMONARY EDEMA & RESPIRATORY FAILURE',
+            '682 - RENAL FAILURE W MCC',
+            '309 - CARDIAC ARRHYTHMIA & CONDUCTION DISORDERS W CC',
+            '065 - INTRACRANIAL HEMORRHAGE OR CEREBRAL INFARCTION W CC OR TPA IN 24 HRS',
+            '481 - HIP & FEMUR PROCEDURES EXCEPT MAJOR JOINT W CC',
+            '192 - CHRONIC OBSTRUCTIVE PULMONARY DISEASE W/O CC/MCC',
+            '689 - KIDNEY & URINARY TRACT INFECTIONS W MCC',
+            '308 - CARDIAC ARRHYTHMIA & CONDUCTION DISORDERS W MCC',
+            '812 - RED BLOOD CELL DISORDERS W/O MCC',
+            '293 - HEART FAILURE & SHOCK W/O CC/MCC')
+
+top_25 <- filter(df, drg_definition %in% target)
+
+top_25$drg_definition <- gsub("[^[:digit:]., ]", "", top_25$drg_definition)
+
+save(top_25, file = 'Data/top25_grouped_drg.Rda')
+
+df <- data.frame(df)
+df <- df[order(df$tp_sum, decreasing = TRUE),] # sort by #procedures
+
+View(df)
+
 save(df, file = 'Data/grouped_drg.Rda')
 
 x <- list(
@@ -169,6 +214,11 @@ plot_ly(x= df$drg_definition,
         y = df$tp_sum,
         type = "bar") %>%
   layout(xaxis = x, yaxis = y,title = "Total Payments by Procedure Type")
+
+ggplot(top_25, aes(x=drg_definition, y=tp_sum)) +
+  geom_col()
+
+ggplotly(p)
 
 #Mapping exploration - Have to upgrade RAM! 
 
@@ -222,6 +272,9 @@ plot_ly(x= df_2$provider_state,
         y = df_2$state_tp_sum, 
         type = "bar") %>%
   layout(xaxis = x_2, yaxis = y_2, title = "Total Payments by State")
+
+dfin_2015 %>% group_by(provider_state, provider_name) %>% tally() %>% arrange(desc(n))
+length(unique(df$drg_definition))
 
 #df_in %>%
   # mutate(payments_to_charges = as.numeric(average_total_payments) / as.numeric(average_covered_charges)) %>%
