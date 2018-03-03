@@ -168,6 +168,16 @@ df$tp_sum <- as.integer(df$tp_sum)
 df$cc_sum <- as.integer(df$cc_sum)
 df$mp_sum <- as.integer(df$mp_sum)
 
+names(df)[names(df) == 'td_sum'] <- 'Discharges'
+names(df)[names(df) == 'tp_sum'] <- 'Avg Covered Charges'
+names(df)[names(df) == 'cc_sum'] <- 'Avg Total Payments'
+names(df)[names(df) == 'mp_sum'] <- 'Avg Medicare Payments'
+
+df <- separate(data = df, col = drg_definition, into = c("drg", "definition"), sep = " - ")
+grouped_drg <- data.frame(df)
+
+save(grouped_drg, file = 'Data/grouped_drg.Rda')
+
 target <- c('871 - SEPTICEMIA OR SEVERE SEPSIS W/O MV 96+ HOURS W MCC',
             '194 - SIMPLE PNEUMONIA & PLEURISY W CC',
             '292 - HEART FAILURE & SHOCK W CC',
@@ -196,15 +206,28 @@ target <- c('871 - SEPTICEMIA OR SEVERE SEPSIS W/O MV 96+ HOURS W MCC',
 
 top_25 <- filter(df, drg_definition %in% target)
 
-top_25 <- separate(data = top_25, col = drg_definition, into = c("drg", "definition"), sep = " - ")
+top_25 <- data.frame(top_25)
+
+names(top_25)[names(top_25) == 'td_sum'] <- 'Total Discharges'
+names(top_25)[names(top_25) == 'tp_sum'] <- 'Average Covered Charges'
+names(top_25)[names(top_25) == 'cc_sum'] <- 'Average Total Payments'
+names(top_25)[names(top_25) == 'mp_sum'] <- 'Average Medicare Payments'
 
 save(top_25, file = 'Data/top25_grouped_drg.Rda')
 
-p <- ggplot(top_25, aes(x=drg, y=td_sum)) +
+p <- ggplot(top_25, aes(x=drg, y=Total Discharges)) +
   geom_col(colour = "black") +
   theme(axis.text.x=element_text(angle=45, hjust=1)) +
   scale_y_continuous(labels = comma)
 p
+ggplotly(p)
+
+ggplot(df, aes(td_sum, cc_sum)) +
+  geom_point() +
+  scale_x_continuous(labels = comma) +
+  scale_y_continuous(labels = comma)
+
+View(df)
 
 # df <- data.frame(df)
 # df <- df[order(df$tp_sum, decreasing = TRUE),] # sort by #procedures
@@ -231,20 +254,22 @@ p <- ggplot(top_25, aes(x=drg_definition, y=td_sum)) +
   scale_y_continuous()
 p
 
-
 #Mapping exploration - Have to upgrade RAM! 
 
 state_map <- map_data('state')
 state.abb <- append(state.abb, c("DC"))
 state.name <- append(state.name, c("District of Columbia"))
 top_25$region <- map_chr(top_25$provider_state, function(x) { tolower(state.name[grep(x, state.abb)]) })
-
+state.abb <- state.abb[1:51]
+state.name <- state.name[1:51]
 
 df_map <- right_join(top_25, state_map, by = "region")
 
-df_map %>% 
+df_1 <- df_map %>% 
   group_by(provider_state) %>%
-  summarize(m = mean(average_covered_charges)) %>%
+  mutate(m = mean(as.integer(average_covered_charges)))
+
+df_1 %>% 
   ggplot(aes(x = long, y = lat, group = group, fill = m)) + 
   geom_polygon() + 
   geom_path(color = 'white') + 
@@ -253,8 +278,20 @@ df_map %>%
                         name = '$') + 
   theme_map() + 
   coord_map('albers', lat0=30, lat1=40) + 
-  ggtitle("Average Covered Charges for all Procedures") + 
+  ggtitle("Mean Covered Charges for all Procedures") + 
   theme(plot.title = element_text(hjust = 0.5))
+
+state_map
+
+  # ggplot(aes(x = df_map$long, y = df_map$lat, group = group, fill = m)) + 
+  # geom_polygon() + 
+  # geom_path(color = 'white') + 
+  # scale_fill_continuous(low = "lightblue", 
+  #                       high = "dodgerblue4",
+  #                       name = '$')
+  # coord_map('albers', lat0=30, lat1=40) + 
+  # ggtitle("Average Covered Charges for all Procedures") + 
+  # theme(plot.title = element_text(hjust = 0.5))
 
 #Provider Comparison - I want the user to be able to select a state and DRG
 #to compare average total covered charges for that procedure at all the hopsitals.  
@@ -271,15 +308,3 @@ df_2 <- df_2[order(df_2$state_cc_sum),] # sort by #procedures
 
 dfin_2015 %>% group_by(provider_state, provider_name) %>% tally() %>% arrange(desc(n))
 length(unique(df$drg_definition))
-
-#df_in %>%
-  # mutate(payments_to_charges = as.numeric(average_total_payments) / as.numeric(average_covered_charges)) %>%
-  # group_by(provider_name) %>%
-  # summarize(m = mean(payments_to_charges)) %>%
-  # arrange(-m) %>%
-  # head(20) %>% 
-  # ggplot(aes(x=reorder(provider_name, -m), y = m)) + 
-  #   geom_bar(stat = 'identity', fill = 'dodgerblue4', color = 'white') + 
-  #   labs(x = 'Provider Name', y = '% Covered Charges', title = 'Total Medicare payments - % of Covered Charges') + 
-  #   scale_y_continuous(labels = scales::percent) + 
-  #   theme(axis.text.x = element_text(angle = 75, hjust = 1) )
