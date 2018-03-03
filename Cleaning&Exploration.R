@@ -20,6 +20,7 @@ library("qdap")
 library("plotly")
 library("devtools")
 library("plotly")
+library("reshape")
 
 #Reading in the Medicare Inpatient provider utilization and payment data. 
 
@@ -96,7 +97,7 @@ col_name_in <- function(x) {
 
 #Combining all 5 years into one dataframe for each category.  Will the 2012 outpatient lack of columns be a problem? 
 
-df_in = bind_rows(dfin_2014, dfin_2015, dfin_2013, dfin_2012, dfin_2011)
+#df_in = bind_rows(dfin_2014, dfin_2015, dfin_2013, dfin_2012, dfin_2011)
 #df_out = bind_rows(dfout_2011, dfout_2012, dfout_2013, dfout_2014, dfout_2015)
 
 #Because there's so much data in each of these, I've decided to move forward with just the inpatient dataframe.
@@ -104,6 +105,7 @@ df_in = bind_rows(dfin_2014, dfin_2015, dfin_2013, dfin_2012, dfin_2011)
 
 length(unique(df_in$year))
 length(unique(df_in$drg_definition))
+length(unique(top_25$hospital_referral_region_.hrr._description))
 
 drg_count_total <- df_in %>% group_by(drg_definition) %>% tally() %>% arrange(desc(n)) %>% View()
 provider_count_total <- df_in %>% group_by(provider_name) %>% tally() %>% arrange(desc(n))
@@ -147,22 +149,24 @@ dfin_2015$average_total_payments <- as.integer(dfin_2015$average_total_payments)
 dfin_2015$average_covered_charges <- as.integer(dfin_2015$average_covered_charges)
 dfin_2015$average_medicare_payments <- as.integer(dfin_2015$average_medicare_payments)
 
+grouped_drg <- df %>% group_by(drg_definition) %>% tally() %>% arrange(desc(n))
+top_drg <- grouped_drg[1:25,]
+
+save(top_drg, file = 'Data/drgtable_grouped_drg.Rda')
+
 #Total discharges by DRG
 
 df <- dfin_2015 %>%
   group_by(drg_definition) %>% 
-  mutate(td_sum = sum(total_discharges),
-         tp_sum = sum(average_total_payments),
-         cc_sum = sum(average_covered_charges),
-         mp_sum = sum(average_medicare_payments))
+  mutate(td_sum = sum(as.numeric(total_discharges)),
+         tp_sum = sum(as.numeric(average_total_payments)),
+         cc_sum = sum(as.numeric(average_covered_charges)),
+         mp_sum = sum(as.numeric(average_medicare_payments)))
 
-grouped_drg <- df %>% group_by(drg_definition) %>% tally() %>% arrange(desc(n))
-View(grouped_drg)
-top_drg <- grouped_drg[1:25,]
-View(top_drg)
-
-
-save(top_drg, file = 'Data/drgtable_grouped_drg.Rda')
+df$td_sum <- as.integer(df$td_sum)
+df$tp_sum <- as.integer(df$tp_sum)
+df$cc_sum <- as.integer(df$cc_sum)
+df$mp_sum <- as.integer(df$mp_sum)
 
 target <- c('871 - SEPTICEMIA OR SEVERE SEPSIS W/O MV 96+ HOURS W MCC',
             '194 - SIMPLE PNEUMONIA & PLEURISY W CC',
@@ -192,59 +196,65 @@ target <- c('871 - SEPTICEMIA OR SEVERE SEPSIS W/O MV 96+ HOURS W MCC',
 
 top_25 <- filter(df, drg_definition %in% target)
 
-top_25$drg_definition <- gsub("[^[:digit:]., ]", "", top_25$drg_definition)
+top_25 <- separate(data = top_25, col = drg_definition, into = c("drg", "definition"), sep = " - ")
 
 save(top_25, file = 'Data/top25_grouped_drg.Rda')
 
-df <- data.frame(df)
-df <- df[order(df$tp_sum, decreasing = TRUE),] # sort by #procedures
+p <- ggplot(top_25, aes(x=drg, y=td_sum)) +
+  geom_col(colour = "black") +
+  theme(axis.text.x=element_text(angle=45, hjust=1)) +
+  scale_y_continuous(labels = comma)
+p
 
-View(df)
+# df <- data.frame(df)
+# df <- df[order(df$tp_sum, decreasing = TRUE),] # sort by #procedures
+# 
+# View(df)
+# 
+# save(df, file = 'Data/grouped_drg.Rda')
 
-save(df, file = 'Data/grouped_drg.Rda')
+# x <- list(
+#   title = "DRG (type of procedure)"
+# )
+# y <- list(
+#   title = "Average Total Payments"
+# )
+# 
+# plot_ly(x= df$drg_definition,
+#         y = df$tp_sum,
+#         type = "bar") %>%
+#   layout(xaxis = x, yaxis = y,title = "Total Payments by Procedure Type")
 
-x <- list(
-  title = "DRG (type of procedure)"
-)
-y <- list(
-  title = "Average Total Payments"
-)
+p <- ggplot(top_25, aes(x=drg_definition, y=td_sum)) +
+  geom_col(colour = "black") +
+  theme(axis.text.x=element_text(angle=45, hjust=1)) +
+  scale_y_continuous()
+p
 
-plot_ly(x= df$drg_definition,
-        y = df$tp_sum,
-        type = "bar") %>%
-  layout(xaxis = x, yaxis = y,title = "Total Payments by Procedure Type")
-
-ggplot(top_25, aes(x=drg_definition, y=tp_sum)) +
-  geom_col()
-
-ggplotly(p)
 
 #Mapping exploration - Have to upgrade RAM! 
 
-# state_map <- map_data('state')
-# state.abb <- append(state.abb, c("DC"))
-# state.name <- append(state.name, c("District of Columbia"))
-# df$region <- map_chr(df$provider_state, function(x) { tolower(state.name[grep(x, state.abb)]) })
-# 
-# View(df)
-# View(state_map)
-# 
-# df_map <- right_join(df, state_map, by = "region")
-# 
-# df_map %>% 
-#   group_by(provider_state) %>%
-#   summarize(m = mean(average_covered_charges)) %>%
-#   ggplot(aes(x = long, y = lat, group = group, fill = m)) + 
-#   geom_polygon() + 
-#   geom_path(color = 'white') + 
-#   scale_fill_continuous(low = "lightblue", 
-#                         high = "dodgerblue4",
-#                         name = '$') + 
-#   theme_map() + 
-#   coord_map('albers', lat0=30, lat1=40) + 
-#   ggtitle("Average Covered Charges for all Procedures") + 
-#   theme(plot.title = element_text(hjust = 0.5))
+state_map <- map_data('state')
+state.abb <- append(state.abb, c("DC"))
+state.name <- append(state.name, c("District of Columbia"))
+top_25$region <- map_chr(top_25$provider_state, function(x) { tolower(state.name[grep(x, state.abb)]) })
+
+
+df_map <- right_join(top_25, state_map, by = "region")
+
+df_map %>% 
+  group_by(provider_state) %>%
+  summarize(m = mean(average_covered_charges)) %>%
+  ggplot(aes(x = long, y = lat, group = group, fill = m)) + 
+  geom_polygon() + 
+  geom_path(color = 'white') + 
+  scale_fill_continuous(low = "lightblue", 
+                        high = "dodgerblue4",
+                        name = '$') + 
+  theme_map() + 
+  coord_map('albers', lat0=30, lat1=40) + 
+  ggtitle("Average Covered Charges for all Procedures") + 
+  theme(plot.title = element_text(hjust = 0.5))
 
 #Provider Comparison - I want the user to be able to select a state and DRG
 #to compare average total covered charges for that procedure at all the hopsitals.  
@@ -258,20 +268,6 @@ df_2 <- dfin_2015 %>%
 
 df_2 <- data.frame(df_2)
 df_2 <- df_2[order(df_2$state_cc_sum),] # sort by #procedures
-
-View(df_2)
-
-x_2 <- list(
-  title = 'Provider States'
-)
-y_2 <- list(
-  title = "Average Covered Charges"
-)
-
-plot_ly(x= df_2$provider_state, 
-        y = df_2$state_tp_sum, 
-        type = "bar") %>%
-  layout(xaxis = x_2, yaxis = y_2, title = "Total Payments by State")
 
 dfin_2015 %>% group_by(provider_state, provider_name) %>% tally() %>% arrange(desc(n))
 length(unique(df$drg_definition))
