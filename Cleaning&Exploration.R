@@ -349,5 +349,71 @@ TN <- df1 %>%
 
 save(TN, file = 'Data/TN.Rda')
 
+test <- df1 %>% 
+  group_by(provider_state, provider_name, drg) %>% 
+  mutate(td = sum(as.numeric(total_discharges)),
+         tp = sum(as.numeric(average_total_payments)),
+         cc = sum(as.numeric(average_covered_charges)),
+         mp = sum(as.numeric(average_medicare_payments)))
 
+save(test, file = 'Data/test.Rda')
 
+# modDf <- reactive({
+#   mdf <- combo %>%
+#     filter(item_artist %in% list(input$artist))
+#   return(mdf)
+# })
+# 
+# modDf2 <- reactive({
+#   mdf <- combo %>%
+#     filter(item_artist %in% list(input$artist2))
+#   return(mdf)
+# })
+# # -------------------------------------------------------------
+# 
+# # CREATING FILTER BY SONG DATABASE USING ARTIST
+# songDf <- reactive({
+#   mdf <- modDf()
+#   if (length(input$song) == 0){
+#     return(mdf)
+#   }
+#   else {
+#     new <- mdf %>%
+#       filter(item_title %in% input$song)
+#     return(new)
+#   }
+# })
+# 
+# songDf2 <- reactive({
+#   mdf <- modDf2()
+#   if (length(input$song2) == 0){
+#     return(mdf)
+#   }
+#   else {
+#     new <- mdf %>%
+#       filter(item_title %in% input$song2)
+#     return(new)
+#   }
+# })
+# # ------------------------------------------------------------
+# 
+# # FILTERING UI SONG CHOICES BY ARTIST
+# observe({
+#   
+#   mdf <- modDf()
+#   
+#   updateSelectInput(session,
+#                     "song",
+#                     choices = sort(unique(mdf$item_title))
+#   )
+# })
+# 
+# observe({
+#   
+#   mdf2 <- modDf2()
+#   
+#   updateSelectInput(session,
+#                     "song2",
+#                     choices = sort(unique(mdf2$item_title))
+#   )
+# })
