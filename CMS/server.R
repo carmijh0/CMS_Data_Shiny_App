@@ -12,8 +12,21 @@ shinyServer(function(input, output) {
   filtered <- reactive ({
     grouped_drg %>% 
       filter(drg == input$plot_hover)
+    return(drg)
     
   })
+  
+  modDf <- reactive({
+    mdf <- TN %>%
+      filter(drg %in% list(input$drg))
+    return(mdf)
+  })
+  
+  # modDf2 <- reactive({
+  #   mdf <- TN %>%
+  #     filter(provider_name %in% list(input$provider2))
+  #   return(mdf)
+  # })
   
   #Top 25 drg bar chart
   output$bar <- renderPlot({
@@ -27,7 +40,6 @@ shinyServer(function(input, output) {
   })
   # Regualr Search Table
   output$table <- DT::renderDataTable({
-    View(top_25)
     if(input$show_data){
       DT::datatable(data = top_25, options = list(pagelength = 10),
                     rownames = FALSE)
@@ -45,15 +57,39 @@ shinyServer(function(input, output) {
   })
 
   #Hover table for the above scatter
-  output$table1 <- DT::renderDataTable({
-    nearPoints(filtered(), input$plot_hover) %>%
-      select(drg, definition, Discharges, Avg.Covered.Charges, Avg.Total.Payments,
-             Avg.Medicare.Payments)
+  # output$table1 <- DT::renderDataTable({
+  #   nearPoints(filtered(), input$plot_hover) %>%
+  #     select(drg, definition, Discharges, Avg.Covered.Charges, Avg.Total.Payments,
+  #            Avg.Medicare.Payments)
 
     })
   
   })
 
+# })
+
+# CREATING FILTER BY 
+drgDF <- reactive({
+  mdf <- modDf()
+  if (length(input$song) == 0){
+    return(mdf)
+  }
+  else {
+    new <- mdf %>%
+      filter(item_title %in% input$song)
+    return(new)
+  }
 })
 
+# songDf2 <- reactive({
+#   mdf <- modDf2()
+#   if (length(input$song2) == 0){
+#     return(mdf)
+#   }
+#   else {
+#     new <- mdf %>%
+#       filter(item_title %in% input$song2)
+#     return(new)
+#   }
+# })
 

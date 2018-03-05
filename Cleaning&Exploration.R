@@ -215,7 +215,7 @@ names(top_25)[names(top_25) == 'mp_sum'] <- 'Average Medicare Payments'
 
 save(top_25, file = 'Data/top25_grouped_drg.Rda')
 
-p <- ggplot(top_25, aes(x=drg, y=Total Discharges)) +
+p <- ggplot(top_25, aes(x=drg, y=)) +
   geom_col(colour = "black") +
   theme(axis.text.x=element_text(angle=45, hjust=1)) +
   scale_y_continuous(labels = comma)
@@ -226,8 +226,6 @@ ggplot(df, aes(td_sum, cc_sum)) +
   geom_point() +
   scale_x_continuous(labels = comma) +
   scale_y_continuous(labels = comma)
-
-View(df)
 
 # df <- data.frame(df)
 # df <- df[order(df$tp_sum, decreasing = TRUE),] # sort by #procedures
@@ -260,51 +258,96 @@ state_map <- map_data('state')
 state.abb <- append(state.abb, c("DC"))
 state.name <- append(state.name, c("District of Columbia"))
 top_25$region <- map_chr(top_25$provider_state, function(x) { tolower(state.name[grep(x, state.abb)]) })
-state.abb <- state.abb[1:51]
-state.name <- state.name[1:51]
 
-df_map <- right_join(top_25, state_map, by = "region")
+df_map <- inner_join(top_25, state_map, by = "region")
 
-df_1 <- df_map %>% 
-  group_by(provider_state) %>%
-  mutate(m = mean(as.integer(average_covered_charges)))
+states <- ggplot(data = state_map, mapping = aes(x = long, y = lat, group = group)) + 
+  coord_fixed(1.3) + 
+  geom_polygon(color = "black", fill = "gray")
 
-df_1 %>% 
-  ggplot(aes(x = long, y = lat, group = group, fill = m)) + 
-  geom_polygon() + 
-  geom_path(color = 'white') + 
-  scale_fill_continuous(low = "lightblue", 
-                        high = "dodgerblue4",
-                        name = '$') + 
-  theme_map() + 
-  coord_map('albers', lat0=30, lat1=40) + 
-  ggtitle("Mean Covered Charges for all Procedures") + 
-  theme(plot.title = element_text(hjust = 0.5))
+states
 
-state_map
+ditch_the_axes <- theme(
+  axis.text = element_blank(),
+  axis.line = element_blank(),
+  axis.ticks = element_blank(),
+  panel.border = element_blank(),
+  panel.grid = element_blank(),
+  axis.title = element_blank()
+)
 
-  # ggplot(aes(x = df_map$long, y = df_map$lat, group = group, fill = m)) + 
-  # geom_polygon() + 
-  # geom_path(color = 'white') + 
-  # scale_fill_continuous(low = "lightblue", 
-  #                       high = "dodgerblue4",
-  #                       name = '$')
-  # coord_map('albers', lat0=30, lat1=40) + 
-  # ggtitle("Average Covered Charges for all Procedures") + 
-  # theme(plot.title = element_text(hjust = 0.5))
+testing <- states + 
+  geom_polygon(data = df_map, aes(fill = m), color = "white") +
+  geom_polygon(color = "black", fill = NA) +
+  theme_bw() +
+  ditch_the_axes
 
+testing
+
+df_map <- df_map %>% 
+   group_by(region) %>%
+   mutate(m = mean(as.integer(average_covered_charges)))
+#   ggplot(aes(x = long, y = lat, group = group, fill = m)) + 
+#   geom_polygon() + 
+#   geom_path(color = 'white') + 
+#   scale_fill_continuous(low = "lightblue", 
+#                         high = "dodgerblue4",
+#                         name = '$') + 
+#   theme_map() + 
+#   coord_map('albers', lat0=30, lat1=40) + 
+#   ggtitle("Mean Covered Charges for all Procedures") + 
+#   theme(plot.title = element_text(hjust = 0.5))
+
+# 
+# gg <- ggplot()
+# gg <- gg + geom_map(data=state_map, map=state_map,
+#                     aes(long, lat, map_id=id),
+#                     color="#b2b2b2", size=0.05, fill="white")
+# gg <- gg + geom_map(data=df, map=usa_map,
+#                     aes(fill=n, map_id=fips),
+#                     color="#b2b2b2", size=0.05)
+# gg <- gg + scale_fill_viridis(name="Count", trans="log10")
+# gg <- gg + coord_proj(us_aeqd_proj)
+# gg <- gg + theme_map()
+# gg <- gg + theme(legend.position=c(0.85, 0.2))
+# gg
 #Provider Comparison - I want the user to be able to select a state and DRG
 #to compare average total covered charges for that procedure at all the hopsitals.  
 
-df_2 <- dfin_2015 %>% 
-  group_by(provider_state) %>%
-  mutate(state_td_sum = sum(total_discharges),
-         state_tp_sum = sum(average_total_payments),
-         state_cc_sum = sum(average_covered_charges),
-         state_mp_sum = sum(average_medicare_payments))
+# df_2 <- dfin_2015 %>% 
+#   group_by(provider_state) %>%
+#   mutate(state_td_sum = sum(total_discharges),
+#          state_tp_sum = sum(average_total_payments),
+#          state_cc_sum = sum(average_covered_charges),
+#          state_mp_sum = sum(average_medicare_payments))
+# 
+# df_2 <- data.frame(df_2)
+# df_2 <- df_2[order(df_2$state_cc_sum),] # sort by #procedures
+# 
+# dfin_2015 %>% group_by(provider_state, provider_name) %>% tally() %>% arrange(desc(n))
+# length(unique(df$drg_definition))
 
-df_2 <- data.frame(df_2)
-df_2 <- df_2[order(df_2$state_cc_sum),] # sort by #procedures
 
-dfin_2015 %>% group_by(provider_state, provider_name) %>% tally() %>% arrange(desc(n))
-length(unique(df$drg_definition))
+#Provdier Comparison Tool
+
+TN_prov <- top_25 %>%
+  filter(provider_state == 'TN') %>% 
+  group_by(provider_name) %>% 
+  tally() %>% 
+  arrange(desc(n))
+View(TN_prov)
+
+df1 <- df[1:13]
+
+TN <- df1 %>% 
+  filter(provider_state == 'TN') %>% 
+  group_by(provider_name) %>% 
+  mutate(td = sum(as.numeric(total_discharges)),
+         tp = sum(as.numeric(average_total_payments)),
+         cc = sum(as.numeric(average_covered_charges)),
+         mp = sum(as.numeric(average_medicare_payments)))
+
+save(TN, file = 'Data/TN.Rda')
+
+
+
