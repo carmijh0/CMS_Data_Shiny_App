@@ -3,7 +3,6 @@ library(ggplot2)
 
 load(file = 'data/top25_grouped_drg.Rda')
 
-
 state_map <- map_data('state')
 state.abb <- append(state.abb, c("DC"))
 state.name <- append(state.name, c("District of Columbia"))

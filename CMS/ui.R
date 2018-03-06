@@ -27,6 +27,7 @@ shinyUI(navbarPage("Exploring Inpatient Utilization Data",
     #Plots on first tab
             mainPanel(
               plotOutput("bar"),
+              # verbatimTextOutput("table")
               DT::dataTableOutput(outputId = 'table')
     )
   )
@@ -50,16 +51,30 @@ shinyUI(navbarPage("Exploring Inpatient Utilization Data",
                            multiple = FALSE),
                checkboxInput(inputId = "show_data1",
                              label = "Show data table",
-                             value = TRUE)
-             ),
+                             value = TRUE),
+               sliderInput(inputId = "bins",
+                           label = "Number of bins:",
+                           min = 1,
+                           max = 50,
+                           value = 30)
+               
+            ),
              #Plots on first tab
              mainPanel(
-               plotOutput("scatter", hover="plot_hover"),
-               dataTableOutput(outputId = 'table1')
-             )
-           )
+               tabsetPanel(
+                 tabPanel("Scatter",
+                          fluidRow(
+                          plotOutput("scatter", hover="plot_hover")
+                          )),
+                 tabPanel("Histogram",
+                          plotOutput("distPlot"))
+               # verbatimTextOutput("table1")
+               # dataTableOutput(outputId = 'table1')
+        )
+      )
+    )
   ),
-  # tabPanel("Mapping"),
+  tabPanel("Mapping"),
   tabPanel("Provider Comparison Tool",
            sidebarLayout(
              sidebarPanel(
@@ -159,6 +174,7 @@ shinyUI(navbarPage("Exploring Inpatient Utilization Data",
                plotOutput("bar1")
              )
            )
-  )
-))
+        )
+      )
+    )
 

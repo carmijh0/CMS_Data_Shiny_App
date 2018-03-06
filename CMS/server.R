@@ -4,6 +4,7 @@ library(ggplot2)
 library(DT)
 library(shinythemes)
 library(scales)
+library(gridExtra)
 #-----------------------------------------------------------------------------------------
 
 # Define server logic
@@ -18,7 +19,7 @@ shinyServer(function(input, output, session) {
   
   modDf <- reactive({
     mdf <- test %>%
-      filter(input$state %in% list(input$state))
+      filter(provider_state %in% list(input$state))
     return(mdf)
   })
   
@@ -32,13 +33,14 @@ shinyServer(function(input, output, session) {
             ylab(paste(input$y)) +
             xlab(paste('Diagnosis Related Group'))
   })
+  
   # Regualr Search Table
   output$table <- DT::renderDataTable({
     if(input$show_data){
-        DT::datatable(data = top_25,  options=list(columnDefs = list(list(visible=FALSE, targets=c(3)))),
+        DT::datatable(data = top_25,  options=list(columnDefs = list(list(visible=FALSE, targets=c(3, 4)))),
                     rownames = FALSE)
     }
-  
+
   })
   
  #Variable exploration scatter of grouped drg df
@@ -51,14 +53,30 @@ shinyServer(function(input, output, session) {
         ylab(paste(input$y1)) +
         xlab(paste(input$x1))
   })
+  
+  #Histogram of drg's
+  
+  output$distPlot <- renderPlot({
+    
+    x    <- input$x1
+    bins <- seq(min(x), max(x), length.out = input$bins + 1)
+    
+    hist(x, breaks = bins, col = "#75AADB", border = "white",
+         main = "Histogram of 2015 DRG's")
+    
+  })
 
   #Hover table for the above scatter
-  output$table1 <- DT::renderDataTable({
-    nearPoints(filtered(), input$plot_hover) %>%
-      select(drg, definition, Discharges, Avg.Covered.Charges, Avg.Total.Payments,
-             Avg.Medicare.Payments)
-
+  output$table1 <- renderPrint({
+    brushedPoints(grouped_drg, input$plot_brush, allRows = TRUE)
   })
+    
+  #   DT::renderDataTable({
+  #   nearPoints(filtered(), input$plot_hover) %>%
+  #     select(drg, definition, Discharges, Avg.Covered.Charges, Avg.Total.Payments,
+  #            Avg.Medicare.Payments)
+  # 
+  # })
   
   drgDF <- reactive({
     mdf <- modDf()
@@ -67,7 +85,7 @@ shinyServer(function(input, output, session) {
     }
     else {
       new <- mdf %>%
-        filter(input$drg %in% list(input$drg))
+        filter(drg %in% list(input$drg))
       return(new)
     }
 
@@ -108,9 +126,9 @@ shinyServer(function(input, output, session) {
   })
   
   # observe({
-  #   
+  # 
   #   mdf <- modDf()
-  #   
+  # 
   #   updateSelectInput(session,
   #                     "drg",
   #                     choices = c("AL" = "AL",
@@ -166,7 +184,7 @@ shinyServer(function(input, output, session) {
   #                                 "DC" = "DC")
   #   )
   # })
-  
+
   output$bar1 <- renderPlot({
     
     ggplot(drgDF(), aes(provider_name, get(input$y2))) +
