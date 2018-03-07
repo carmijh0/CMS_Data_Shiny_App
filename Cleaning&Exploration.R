@@ -154,6 +154,8 @@ top_drg <- grouped_drg[1:25,]
 
 save(top_drg, file = 'Data/drgtable_grouped_drg.Rda')
 
+save(dfin_2015, file = 'Data/dfin_2015.Rda')
+
 #Total discharges by DRG
 
 df <- dfin_2015 %>%

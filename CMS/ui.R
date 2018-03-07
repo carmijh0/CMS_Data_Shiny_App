@@ -1,5 +1,5 @@
 # Define UI for application that draws a histogram
-shinyUI(navbarPage("Exploring Inpatient Utilization Data",
+shinyUI(navbarPage("Exploration of 2015 Provider Inpatient Utilization and Payment Data",
                    theme = shinytheme("flatly"), 
                    fluid = TRUE,
   
@@ -56,7 +56,9 @@ shinyUI(navbarPage("Exploring Inpatient Utilization Data",
                            label = "Number of bins:",
                            min = 1,
                            max = 50,
-                           value = 30)
+                           value = 30),
+               img(src='1.png', width = "100%"),
+               img(src='2.png', width = "100%")
                
             ),
              #Plots on first tab
@@ -64,12 +66,14 @@ shinyUI(navbarPage("Exploring Inpatient Utilization Data",
                tabsetPanel(
                  tabPanel("Scatter",
                           fluidRow(
-                          plotOutput("scatter", hover="plot_hover")
+                          plotOutput("scatter", hover="plot_brush"),
+                          # dataTableOutput(outputId = 'table1')
+                          verbatimTextOutput("info")
                           )),
                  tabPanel("Histogram",
-                          plotOutput("distPlot"))
-               # verbatimTextOutput("table1")
-               # dataTableOutput(outputId = 'table1')
+                          plotOutput("hist")),
+                 tabPanel("Summary",
+                          verbatimTextOutput("sum"))
         )
       )
     )
@@ -166,7 +170,8 @@ shinyUI(navbarPage("Exploring Inpatient Utilization Data",
                                        "Average Covered Charges" = "tp",
                                        "Average Total Payments" = "cc",
                                        "Average Medicare Payments" = "mp"),
-                           multiple = FALSE)
+                           multiple = FALSE),
+               img(src='drg_cats.png', width = "100%")
                
              ),
              #Plots on first tab
